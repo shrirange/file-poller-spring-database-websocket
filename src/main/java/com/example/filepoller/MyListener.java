@@ -1,6 +1,14 @@
 package com.example.filepoller;
 
+import java.util.Iterator;
+import java.util.List;
+
+import javax.transaction.Transactional;
+
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
 
 import com.github.drapostolos.rdp4j.DirectoryListener;
@@ -14,6 +22,7 @@ import com.github.drapostolos.rdp4j.IoErrorListener;
 import com.github.drapostolos.rdp4j.IoErrorRaisedEvent;
 
 @Component
+@Transactional
 public class MyListener implements DirectoryListener, IoErrorListener, InitialContentListener {
 	
 	@Autowired
@@ -21,8 +30,11 @@ public class MyListener implements DirectoryListener, IoErrorListener, InitialCo
 	
 	@Autowired
 	private FilesInformationRepository filesInformationRepository;
+	
+	private AuthorRepository authorRepository;
 
-	public MyListener() {
+	public MyListener(AuthorRepository authorRepository ) {
+		this.authorRepository = authorRepository;
 	}
 
 	public void fileAdded(FileAddedEvent event) {
@@ -31,6 +43,13 @@ public class MyListener implements DirectoryListener, IoErrorListener, InitialCo
 		FilesInformation fi = new FilesInformation();
 		fi.setFolderName(event.getPolledDirectory().toString());
 		fi.setFileName(event.getFileElement().getName()); 
+		//filesInformationRepository.findById(fi.getFilesInformationId());
+		List<Author> listofAuthor = authorRepository.findAll();
+		for (Iterator iterator = listofAuthor.iterator(); iterator.hasNext();) {
+			Author author = (Author) iterator.next();
+			author.setAuthorName(author.getAddress().getAddress1() + event.getFileElement().getName());
+			authorRepository.save(author);
+		}
 		filesInformationRepository.save(fi);
 	}
 
@@ -54,4 +73,5 @@ public class MyListener implements DirectoryListener, IoErrorListener, InitialCo
 	public void initialContent(InitialContentEvent event) {
 		System.out.println("initial Content: ^");
 	}
+
 }
